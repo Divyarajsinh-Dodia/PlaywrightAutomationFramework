@@ -1,0 +1,53 @@
+{
+  "allure": {
+    "directory": "allure-results",
+    "links": [
+      {
+        "name": "GitHub Repository",
+        "url": "https://github.com/your-org/playwright-automation-framework",
+        "type": "link"
+      },
+      {
+        "name": "Test Documentation",
+        "url": "https://your-docs-site.com/testing",
+        "type": "link"
+      }
+    ],
+    "plugins": [
+      "behaviors",
+      "packages",
+      "screen-diff",
+      "trx",
+      "xunit-xml",
+      "junit-xml"
+    ]
+  },
+  "categories": [
+    {
+      "name": "Product defects",
+      "messageRegex": ".*Assertion.*",
+      "traceRegex": ".*",
+      "matchedStatuses": ["failed"]
+    },
+    {
+      "name": "Test defects", 
+      "messageRegex": ".*Exception.*",
+      "traceRegex": ".*",
+      "matchedStatuses": ["broken"]
+    },
+    {
+      "name": "Environment issues",
+      "messageRegex": ".*timeout.*|.*connection.*|.*network.*",
+      "traceRegex": ".*",
+      "matchedStatuses": ["broken", "failed"]
+    }
+  ],
+  "environment": {
+    "Framework": "Playwright",
+    "Language": "C#",
+    "Test.Runner": "NUnit",
+    "Reporting": "Allure",
+    "OS": "Windows/Linux/macOS",
+    "Browser.Support": "Chrome, Firefox, Safari, Edge"
+  }
+} 
