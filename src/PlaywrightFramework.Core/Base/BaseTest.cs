@@ -9,7 +9,8 @@ using NUnit.Framework;
 using PlaywrightFramework.Core.Configuration;
 using PlaywrightFramework.Core.Drivers;
 using PlaywrightFramework.Core.Helpers;
-using Serilog;
+using NLog;
+using NLog.Extensions.Logging;
 
 namespace PlaywrightFramework.Core.Base;
 
@@ -179,7 +180,21 @@ public abstract class BaseTest
     protected async Task<string> TakeScreenshotAsync(string? screenshotName = null)
     {
         screenshotName ??= $"{TestContext.CurrentContext.Test.Name}_{DateTime.Now:yyyyMMdd_HHmmss}";
-        return await ScreenshotHelper.TakeScreenshotAsync(screenshotName);
+        var screenshotPath = await ScreenshotHelper.TakeScreenshotAsync(screenshotName);
+
+        // Attach screenshot bytes to Allure as base64 so it's always present in the report
+        try
+        {
+            var bytes = await File.ReadAllBytesAsync(screenshotPath);
+            var attachmentName = $"Screenshot_{screenshotName}";
+            AllureApi.AddAttachment(attachmentName, "image/png", bytes);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to attach screenshot to Allure");
+        }
+
+        return screenshotPath;
     }
 
     /// <summary>
@@ -302,35 +317,76 @@ public abstract class BaseTest
     /// </summary>
     private void SetupLogging(IServiceCollection services, TestConfiguration config)
     {
-        var loggerConfig = new LoggerConfiguration();
+        // Create NLog configuration programmatically based on TestConfiguration settings
+        var nlogConfig = new NLog.Config.LoggingConfiguration();
 
-        // Set minimum level
-        loggerConfig.MinimumLevel.Is(Enum.Parse<Serilog.Events.LogEventLevel>(config.Logging.MinimumLevel));
-
-        // Configure console sink
+        // Console target
         if (config.Logging.WriteToConsole)
         {
-            loggerConfig.WriteTo.Console();
+            var consoleTarget = new NLog.Targets.ConsoleTarget("console")
+            {
+                Layout = config.Logging.StructuredLogging
+                    ? "${longdate}|${level:uppercase=true}|${logger}|${message}|${exception:format=toString}"
+                    : "${longdate} ${level} ${message} ${exception}"
+            };
+
+            nlogConfig.AddTarget(consoleTarget);
+            nlogConfig.AddRule(GetNLogLevel(config.Logging.MinimumLevel), NLog.LogLevel.Fatal, consoleTarget);
         }
 
-        // Configure file sink
+        // File target
         if (config.Logging.WriteToFile)
         {
             var logPath = config.Logging.LogFilePathTemplate.Replace("{Date}", DateTime.Now.ToString("yyyyMMdd"));
-            loggerConfig.WriteTo.File(logPath, rollingInterval: RollingInterval.Day);
+
+            var fileTarget = new NLog.Targets.FileTarget("file")
+            {
+                FileName = logPath,
+                CreateDirs = true,
+                Layout = config.Logging.StructuredLogging
+                    ? "${longdate}|${level:uppercase=true}|${logger}|${message}|${exception:format=toString,Data:maxInnerExceptionLevel=10}"
+                    : "${longdate} ${level} ${message} ${exception}"
+            };
+
+            nlogConfig.AddTarget(fileTarget);
+            nlogConfig.AddRule(GetNLogLevel(config.Logging.MinimumLevel), NLog.LogLevel.Fatal, fileTarget);
         }
 
-        // Build logger
-        var serilogLogger = loggerConfig.CreateLogger();
-        Log.Logger = serilogLogger;
+        // Apply configuration
+        NLog.LogManager.Configuration = nlogConfig;
 
-        // Add to services
+        // Register NLog as the logging provider for Microsoft.Extensions.Logging
         services.AddLogging(builder =>
         {
             builder.ClearProviders();
-            builder.AddSerilog(serilogLogger);
+            builder.SetMinimumLevel(GetMicrosoftLogLevel(config.Logging.MinimumLevel));
+            builder.AddNLog();
         });
     }
+
+    // Helper to convert configuration log level string to NLog.LogLevel
+    private static NLog.LogLevel GetNLogLevel(string level) => level?.ToLowerInvariant() switch
+    {
+        "trace" => NLog.LogLevel.Trace,
+        "debug" => NLog.LogLevel.Debug,
+        "information" or "info" => NLog.LogLevel.Info,
+        "warning" => NLog.LogLevel.Warn,
+        "error" => NLog.LogLevel.Error,
+        "critical" => NLog.LogLevel.Fatal,
+        _ => NLog.LogLevel.Info
+    };
+
+    // Helper to convert configuration log level string to Microsoft.Extensions.Logging.LogLevel
+    private static Microsoft.Extensions.Logging.LogLevel GetMicrosoftLogLevel(string level) => level?.ToLowerInvariant() switch
+    {
+        "trace" => Microsoft.Extensions.Logging.LogLevel.Trace,
+        "debug" => Microsoft.Extensions.Logging.LogLevel.Debug,
+        "information" or "info" => Microsoft.Extensions.Logging.LogLevel.Information,
+        "warning" => Microsoft.Extensions.Logging.LogLevel.Warning,
+        "error" => Microsoft.Extensions.Logging.LogLevel.Error,
+        "critical" => Microsoft.Extensions.Logging.LogLevel.Critical,
+        _ => Microsoft.Extensions.Logging.LogLevel.Information
+    };
 
     /// <summary>
     /// Captures a screenshot when a test fails
@@ -340,9 +396,6 @@ public abstract class BaseTest
         try
         {
             var screenshotPath = await TakeScreenshotAsync($"FAILURE_{TestContext.CurrentContext.Test.Name}");
-
-            // TODO: Add Allure attachment when Allure API is properly configured
-
             Logger.LogInformation("Failure screenshot captured: {Path}", screenshotPath);
         }
         catch (Exception ex)

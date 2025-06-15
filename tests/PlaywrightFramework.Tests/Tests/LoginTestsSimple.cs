@@ -56,7 +56,7 @@ public class LoginTestsSimple : Base  // Inherits from Base, which handles login
     {
         Console.WriteLine($"Running login test with parameters: Environment={environment}, Entity={entity}, Warehouse={warehouse}, OffsetAccount={offsetAccount}, ItemNumber={itemNumber}, ItemQty={itemQty}, BatchNumber={batchNumber}, Location={location}");
         Console.WriteLine("Starting login test with valid credentials.");
-
+        ScreenshotHelper.TakeScreenshotAsync("LoginTestStart").Wait();
         StringAssert.Contains("US01", entity, "Entity should be US01");
     }
 } 
