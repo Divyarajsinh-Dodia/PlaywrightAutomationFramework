@@ -13,8 +13,6 @@ namespace PlaywrightFramework.Tests
 {
     public class Base : BaseTest
     {
-        protected LoginPage _loginPage = null!;
-        
         // Static flag to track if login has been performed for this test class
         private static bool _loginPerformed = false;
         private static readonly object _loginLock = new object();
@@ -47,16 +45,15 @@ namespace PlaywrightFramework.Tests
         {
             Logger.LogInformation("Starting one-time login setup for test class");
             
-            var loginLogger = Logger as ILogger<LoginPage> ??
-                new Microsoft.Extensions.Logging.Abstractions.NullLogger<LoginPage>();
-            _loginPage = new LoginPage(Page, Config, loginLogger);
+            // Get login page from PageFactory
+            var loginPage = PageFactory.GetPage<LoginPage>();
             
-            await _loginPage.NavigateToLoginPageAsync();
+            // Navigate to login page and perform login
+            await loginPage.NavigateToLoginPageAsync();
             
             // Use the simplified, robust login method
-            await _loginPage.LoginAsync("divyaraj.dodia.ext@envu.com", "May@1617");
+            //await loginPage.LoginAsync("divyaraj.dodia.ext@envu.com", "May@1617");
             
-            // Initialize dashboard page for use in tests            
             Logger.LogInformation("One-time login setup completed successfully");
         }
 

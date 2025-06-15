@@ -20,12 +20,40 @@ namespace PlaywrightFramework.Core.Base;
 [AllureNUnit]
 public abstract class BaseTest
 {
+    /// <summary>
+    /// Test configuration loaded from appsettings.json
+    /// </summary>
     protected TestConfiguration Config { get; private set; } = null!;
+    
+    /// <summary>
+    /// Browser manager for handling browser lifecycle
+    /// </summary>
     protected BrowserManager BrowserManager { get; private set; } = null!;
+    
+    /// <summary>
+    /// Playwright page instance
+    /// </summary>
     protected IPage Page { get; private set; } = null!;
+    
+    /// <summary>
+    /// Logger for test logging
+    /// </summary>
     protected Microsoft.Extensions.Logging.ILogger Logger { get; private set; } = null!;
+    
+    /// <summary>
+    /// Helper for capturing screenshots
+    /// </summary>
     protected ScreenshotHelper ScreenshotHelper { get; private set; } = null!;
+    
+    /// <summary>
+    /// Helper for handling test data
+    /// </summary>
     protected TestDataHelper TestDataHelper { get; private set; } = null!;
+    
+    /// <summary>
+    /// Page factory for creating page objects with fluent interfaces
+    /// </summary>
+    protected PageFactory PageFactory { get; private set; } = null!;
 
     private IServiceProvider _serviceProvider = null!;
     private readonly string _testResultsPath = Path.Combine(Directory.GetCurrentDirectory(), "TestResults");
@@ -52,8 +80,7 @@ public abstract class BaseTest
 
     /// <summary>
     /// Setup before each test
-    /// </summary>
-    [SetUp]
+    /// </summary>    [SetUp]
     public virtual async Task SetUpAsync()
     {
         Logger.LogInformation("Starting test: {TestName}", TestContext.CurrentContext.Test.Name);
@@ -67,6 +94,9 @@ public abstract class BaseTest
         // Initialize helpers
         ScreenshotHelper = new ScreenshotHelper(Page, Config, Logger);
         //TestDataHelper = new TestDataHelper(Config, Logger);
+          // Initialize page factory for fluent page navigation
+        var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
+        PageFactory = new PageFactory(Page, Config, loggerFactory);
 
         // Add Allure environment information
         AddAllureEnvironmentInfo();

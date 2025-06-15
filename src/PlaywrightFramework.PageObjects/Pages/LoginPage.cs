@@ -13,7 +13,7 @@ namespace PlaywrightFramework.PageObjects.Pages;
 /// <summary>
 /// Page Object for Login page demonstrating best practices with ILocator extensions
 /// </summary>
-public class LoginPage : BasePage
+public class LoginPage : FluentBasePage
 {
     // Page URL
     private const string PageUrl = "https://desd365-rolltest.sandbox.operations.dynamics.com/?cmp=US01&mi=DefaultDashboard";
@@ -27,8 +27,16 @@ public class LoginPage : BasePage
     private ILocator OTPInput => Locate("//input[@placeholder='Code']");
     private ILocator VerifyButton => Locate("//input[@value='Verify']");
 
-    public LoginPage(IPage page, TestConfiguration config, ILogger<LoginPage> logger) 
-        : base(page, config, logger)
+    // Navigation properties for fluent API
+    private HomePage _homePage;
+    
+    /// <summary>
+    /// Access to HomePage for fluent navigation
+    /// </summary>
+    public HomePage HomePage => _homePage ??= PageFactory.GetPage<HomePage>();
+
+    public LoginPage(IPage page, TestConfiguration config, ILogger<LoginPage> logger, PageFactory pageFactory) 
+        : base(page, config, logger, pageFactory)
     {
     }
 
@@ -177,19 +185,86 @@ public class LoginPage : BasePage
         }
     }
 
+    // Fluent (synchronous) methods for method chaining
+
     /// <summary>
-    /// Performs complete login
+    /// Navigates to the login page
     /// </summary>
-    /// <param name="username">Username</param>
-    /// <param name="password">Password</param>
-    [AllureStep("Complete login with username: {username}")]
-    public async Task<LoginPage> LoginAsync(string username, string password)
+    [AllureStep("Navigate to login page")]
+    public LoginPage NavigateToLoginPage()
     {
-        await EnterUsernameAsync(username);
-        await EnterPasswordAsync(password);
-        await EnterSMSAsync();
-        
-        Logger.LogInformation("Completed login for user: {Username}", username);
+        NavigateTo(PageUrl);
+        WaitForLoad();
+        Logger.LogInformation("Navigated to login page");
         return this;
     }
-} 
+
+    /// <summary>
+    /// Enters username in the username field
+    /// </summary>
+    [AllureStep("Enter username: {username}")]
+    public LoginPage EnterUsername(string username)
+    {
+        UsernameInput.FillAsync(username).GetAwaiter().GetResult();
+        Logger.LogDebug("Entered username: {Username}", username);
+        NextButton.ClickAsync().GetAwaiter().GetResult();
+        Logger.LogDebug("Clicked next button after entering username");
+        WaitForLoad(WaitUntilState.NetworkIdle);
+        return this;
+    }
+
+    /// <summary>
+    /// Enters password in the password field
+    /// </summary>
+    [AllureStep("Enter password")]
+    public LoginPage EnterPassword(string password)
+    {
+        PasswordInput.FillAsync(password).GetAwaiter().GetResult();
+        Logger.LogDebug("Entered password");
+        SignInButton.ClickAsync().GetAwaiter().GetResult();
+        Logger.LogDebug("Clicked sign in button after entering password");
+        WaitForLoad(WaitUntilState.NetworkIdle);
+        return this;
+    }
+
+    /// <summary>
+    /// Enters SMS verification code
+    /// </summary>
+    [AllureStep("Enter SMS")]
+    public LoginPage EnterSMS()
+    {
+        SendSMSButton.ClickAsync().GetAwaiter().GetResult();
+        WaitForLoad(WaitUntilState.NetworkIdle);
+        OTPInput.FillAsync(GetSMSMessage()).GetAwaiter().GetResult();
+        VerifyButton.ClickAsync().GetAwaiter().GetResult();
+        WaitForLoad(WaitUntilState.NetworkIdle);
+        return this;
+    }
+
+    /// <summary>
+    /// Performs complete login and returns HomePage for fluent navigation
+    /// </summary>
+    [AllureStep("Complete login with username: {username}")]
+    public HomePage Login(string username, string password)
+    {
+        EnterUsername(username);
+        EnterPassword(password);
+        EnterSMS();
+        
+        Logger.LogInformation("Completed login for user: {Username}", username);
+        return HomePage;
+    }
+
+    /// <summary>
+    /// Click Login Button and returns HomePage for fluent navigation
+    /// </summary>
+    [AllureStep("Click login button")]
+    public HomePage ClickOnLoginButton()
+    {
+        // This method assumes username and password are already entered
+        // and just clicks the final login button and returns the HomePage
+        EnterSMS();
+        Logger.LogInformation("Clicked login button and navigated to home page");
+        return HomePage;
+    }
+}
