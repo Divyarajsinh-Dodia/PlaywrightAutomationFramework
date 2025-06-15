@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Playwright;
 using PlaywrightFramework.Core.Base;
 using PlaywrightFramework.Core.Configuration;
+using PlaywrightFramework.Core.Extensions;
 using System.Text.RegularExpressions;
 using Twilio;
 using Twilio.Rest.Api.V2010.Account;
@@ -10,21 +11,21 @@ using Twilio.Rest.Api.V2010.Account;
 namespace PlaywrightFramework.PageObjects.Pages;
 
 /// <summary>
-/// Page Object for Login page demonstrating best practices
+/// Page Object for Login page demonstrating best practices with ILocator extensions
 /// </summary>
 public class LoginPage : BasePage
 {
     // Page URL
     private const string PageUrl = "https://desd365-rolltest.sandbox.operations.dynamics.com/?cmp=US01&mi=DefaultDashboard";
     
-    // Locators - using constants for maintainability
-    private const string UsernameInputSelector = "//input[@name='loginfmt']";
-    private const string UsernameNextButtonSelector = "//input[@type='submit' and @value='Next']";
-    private const string PasswordInputSelector = "//input[@Placeholder='Password']";
-    private const string SignInButtonSelector = "//input[@value='Sign in']";
-    private const string SendSMSButtonSelector = "//div[@data-value='OneWaySMS' and @role='button']";
-    private const string OTPInputSelector = "//input[@placeholder='Code']";
-    private const string VerifyButtonSelector = "//input[@value='Verify']";
+    // ILocator properties - clean and type-safe
+    private ILocator UsernameInput => Locate("//input[@name='loginfmt']");
+    private ILocator NextButton => Locate("//input[@type='submit' and @value='Next']");
+    private ILocator PasswordInput => Locate("//input[@Placeholder='Password']");
+    private ILocator SignInButton => Locate("//input[@value='Sign in']");
+    private ILocator SendSMSButton => Locate("//div[@data-value='OneWaySMS' and @role='button']");
+    private ILocator OTPInput => Locate("//input[@placeholder='Code']");
+    private ILocator VerifyButton => Locate("//input[@value='Verify']");
 
     public LoginPage(IPage page, TestConfiguration config, ILogger<LoginPage> logger) 
         : base(page, config, logger)
@@ -98,9 +99,9 @@ public class LoginPage : BasePage
     [AllureStep("Enter username: {username}")]
     public async Task<LoginPage> EnterUsernameAsync(string username)
     {
-        await FillAsync(UsernameInputSelector, username);
+        await UsernameInput.FillAsync(username);           // Beautiful extension method syntax!
         Logger.LogDebug("Entered username: {Username}", username);
-        await ClickAsync(UsernameNextButtonSelector);
+        await NextButton.ClickAsync();                     // Clean and intuitive!
         Logger.LogDebug("Clicked next button after entering username");
         await WaitForLoadAsync(WaitUntilState.NetworkIdle);
         return this;
@@ -113,9 +114,9 @@ public class LoginPage : BasePage
     [AllureStep("Enter password")]
     public async Task<LoginPage> EnterPasswordAsync(string password)
     {
-        await FillAsync(PasswordInputSelector, password);
+        await PasswordInput.FillAsync(password);           // Perfect syntax!
         Logger.LogDebug("Entered password");
-        await ClickAsync(SignInButtonSelector);
+        await SignInButton.ClickAsync();                   // So readable!
         Logger.LogDebug("Clicked sign in button after entering password");
         await WaitForLoadAsync(WaitUntilState.NetworkIdle);
         return this;
@@ -124,12 +125,56 @@ public class LoginPage : BasePage
     [AllureStep("Enter SMS")]
     public async Task<LoginPage> EnterSMSAsync()
     {
-        await ClickAsync(SendSMSButtonSelector);
+        await SendSMSButton.ClickAsync();                  // Gorgeous!
         await WaitForLoadAsync(WaitUntilState.NetworkIdle);
-        await FillAsync(OTPInputSelector, GetSMSMessage());
-        await ClickAsync(VerifyButtonSelector);
+        await OTPInput.FillAsync(GetSMSMessage());         // Clean and clear!
+        await VerifyButton.ClickAsync();                   // Perfect!
         await WaitForLoadAsync(WaitUntilState.NetworkIdle);
         return this;
+    }
+
+    /// <summary>
+    /// Validation methods using query extensions
+    /// </summary>
+    public async Task<bool> IsLoginFormReadyAsync()
+    {
+        return await UsernameInput.IsVisibleAsync() &&     // LocatorQueryExtensions
+               await NextButton.IsEnabledAsync();          // LocatorQueryExtensions
+    }
+
+    public async Task<string?> GetUsernameValueAsync()
+    {
+        return await UsernameInput.GetValueAsync();        // Convenience method from LocatorQueryExtensions
+    }
+
+    public async Task<string?> GetPasswordPlaceholderAsync()
+    {
+        return await PasswordInput.GetPlaceholderAsync();  // Convenience method from LocatorQueryExtensions
+    }
+
+    /// <summary>
+    /// Wait methods using wait extensions
+    /// </summary>
+    public async Task WaitForPasswordFieldAsync()
+    {
+        await PasswordInput.WaitForAsync();                // LocatorWaitExtensions
+    }
+
+    public async Task WaitForUsernameToBeEditableAsync()
+    {
+        await UsernameInput.WaitToBeEditableAsync();       // LocatorWaitExtensions
+    }
+
+    /// <summary>
+    /// Advanced action examples
+    /// </summary>
+    public async Task TryEnterUsernameAsync(string username)
+    {
+        var success = await UsernameInput.TryFillAsync(username); // LocatorActionExtensions
+        if (success)
+        {
+            await NextButton.ClickIfEnabledAsync();        // LocatorActionExtensions
+        }
     }
 
     /// <summary>

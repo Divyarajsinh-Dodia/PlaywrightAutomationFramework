@@ -60,6 +60,9 @@ public abstract class BaseTest
         // Create a new page for each test
         Page = await BrowserManager.CreatePageAsync();
 
+        // Set the LocatorContext for element highlighting
+        Extensions.LocatorContext.SetContext(Config, Logger);
+
         // Initialize helpers
         ScreenshotHelper = new ScreenshotHelper(Page, Config, Logger);
         //TestDataHelper = new TestDataHelper(Config, Logger);
@@ -83,6 +86,9 @@ public abstract class BaseTest
 
         try
         {
+            // Clean up LocatorContext
+            Extensions.LocatorContext.ClearContext();
+
             // Capture screenshot if test failed and feature is enabled
             if (testResult == NUnit.Framework.Interfaces.TestStatus.Failed &&
                 Config.Execution.CaptureScreenshotOnFailure)
