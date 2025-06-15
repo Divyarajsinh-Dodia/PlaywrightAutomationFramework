@@ -790,4 +790,382 @@ public abstract class BasePage
     }
 
     #endregion
+
+    #region Keyboard and Mouse Actions
+
+    /// <summary>
+    /// Presses the Enter key on the currently focused element or page
+    /// </summary>
+    /// <param name="selector">Optional element selector to focus before pressing Enter</param>
+    public async Task PressEnterAsync(string? selector = null)
+    {
+        Logger.LogDebug("Pressing Enter key{Selector}", selector != null ? $" on element: {selector}" : "");
+        
+        try
+        {
+            if (selector != null)
+            {
+                await Page.Locator(selector).PressAsync("Enter");
+            }
+            else
+            {
+                await Page.Keyboard.PressAsync("Enter");
+            }
+            
+            Logger.LogDebug("Successfully pressed Enter key");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to press Enter key{Selector}", selector != null ? $" on element: {selector}" : "");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Presses the Tab key to move focus to the next element
+    /// </summary>
+    /// <param name="selector">Optional element selector to focus before pressing Tab</param>
+    public async Task PressTabAsync(string? selector = null)
+    {
+        Logger.LogDebug("Pressing Tab key{Selector}", selector != null ? $" on element: {selector}" : "");
+        
+        try
+        {
+            if (selector != null)
+            {
+                await Page.Locator(selector).PressAsync("Tab");
+            }
+            else
+            {
+                await Page.Keyboard.PressAsync("Tab");
+            }
+            
+            Logger.LogDebug("Successfully pressed Tab key");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to press Tab key{Selector}", selector != null ? $" on element: {selector}" : "");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Presses the Escape key to cancel operations or close dialogs
+    /// </summary>
+    /// <param name="selector">Optional element selector to focus before pressing Escape</param>
+    public async Task PressEscapeAsync(string? selector = null)
+    {
+        Logger.LogDebug("Pressing Escape key{Selector}", selector != null ? $" on element: {selector}" : "");
+        
+        try
+        {
+            if (selector != null)
+            {
+                await Page.Locator(selector).PressAsync("Escape");
+            }
+            else
+            {
+                await Page.Keyboard.PressAsync("Escape");
+            }
+            
+            Logger.LogDebug("Successfully pressed Escape key");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to press Escape key{Selector}", selector != null ? $" on element: {selector}" : "");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Presses Ctrl+A to select all content in the focused element or page
+    /// </summary>
+    /// <param name="selector">Optional element selector to focus before pressing Ctrl+A</param>
+    public async Task PressCtrlAAsync(string? selector = null)
+    {
+        Logger.LogDebug("Pressing Ctrl+A (Select All){Selector}", selector != null ? $" on element: {selector}" : "");
+        
+        try
+        {
+            if (selector != null)
+            {
+                await Page.Locator(selector).PressAsync("Control+a");
+            }
+            else
+            {
+                await Page.Keyboard.PressAsync("Control+a");
+            }
+            
+            Logger.LogDebug("Successfully pressed Ctrl+A");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to press Ctrl+A{Selector}", selector != null ? $" on element: {selector}" : "");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Types text slowly with a delay between each character for better reliability
+    /// </summary>
+    /// <param name="selector">Element selector to type into</param>
+    /// <param name="text">Text to type</param>
+    /// <param name="delayMs">Delay in milliseconds between each character (default: 100ms)</param>
+    public async Task TypeTextSlowlyAsync(string selector, string text, int delayMs = 100)
+    {
+        Logger.LogDebug("Typing text slowly into element: {Selector} with {Delay}ms delay", selector, delayMs);
+        
+        try
+        {
+            var element = Page.Locator(selector);
+            await element.WaitForAsync(new LocatorWaitForOptions 
+            { 
+                State = WaitForSelectorState.Visible,
+                Timeout = Config.Browser.TimeoutMs 
+            });
+            
+            // Focus the element first
+            await element.FocusAsync();
+            
+            // Type each character with delay
+            for (int i = 0; i < text.Length; i++)
+            {
+                await element.TypeAsync(text[i].ToString(), new LocatorTypeOptions { Delay = delayMs });
+                
+                // Additional delay between characters for very slow typing
+                if (delayMs > 50)
+                {
+                    await Task.Delay(delayMs / 2);
+                }
+            }
+            
+            Logger.LogDebug("Successfully typed text slowly: {Length} characters", text.Length);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to type text slowly into element: {Selector}", selector);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Right-clicks an element to open context menu
+    /// </summary>
+    /// <param name="selector">Element selector to right-click</param>
+    /// <param name="options">Optional click options</param>
+    public async Task RightClickAsync(string selector, LocatorClickOptions? options = null)
+    {
+        Logger.LogDebug("Right-clicking element: {Selector}", selector);
+        
+        try
+        {
+            var element = Page.Locator(selector);
+            await element.WaitForAsync(new LocatorWaitForOptions 
+            { 
+                State = WaitForSelectorState.Visible,
+                Timeout = Config.Browser.TimeoutMs 
+            });
+            
+            var clickOptions = options ?? new LocatorClickOptions();
+            clickOptions.Button = MouseButton.Right;
+            
+            await element.ClickAsync(clickOptions);
+            
+            Logger.LogDebug("Successfully right-clicked element: {Selector}", selector);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to right-click element: {Selector}", selector);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Hovers over an element with optional wait time
+    /// </summary>
+    /// <param name="selector">Element selector to hover over</param>
+    /// <param name="waitAfterHoverMs">Time to wait after hovering (default: 500ms)</param>
+    /// <param name="options">Optional hover options</param>
+    public async Task HoverEnhancedAsync(string selector, int waitAfterHoverMs = 500, LocatorHoverOptions? options = null)
+    {
+        Logger.LogDebug("Hovering over element: {Selector}", selector);
+        
+        try
+        {
+            var element = Page.Locator(selector);
+            await element.WaitForAsync(new LocatorWaitForOptions 
+            { 
+                State = WaitForSelectorState.Visible,
+                Timeout = Config.Browser.TimeoutMs 
+            });
+            
+            await element.HoverAsync(options);
+            
+            // Wait after hover to allow for hover effects
+            if (waitAfterHoverMs > 0)
+            {
+                await Task.Delay(waitAfterHoverMs);
+            }
+            
+            Logger.LogDebug("Successfully hovered over element: {Selector}", selector);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to hover over element: {Selector}", selector);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Double-clicks an element with enhanced reliability
+    /// </summary>
+    /// <param name="selector">Element selector to double-click</param>
+    /// <param name="options">Optional double-click options</param>
+    public async Task DoubleClickEnhancedAsync(string selector, LocatorDblClickOptions? options = null)
+    {
+        Logger.LogDebug("Double-clicking element: {Selector}", selector);
+        
+        try
+        {
+            var element = Page.Locator(selector);
+            await element.WaitForAsync(new LocatorWaitForOptions 
+            { 
+                State = WaitForSelectorState.Visible,
+                Timeout = Config.Browser.TimeoutMs 
+            });
+            
+            await element.DblClickAsync(options);
+            
+            Logger.LogDebug("Successfully double-clicked element: {Selector}", selector);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to double-click element: {Selector}", selector);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Drags an element from source to target location
+    /// </summary>
+    /// <param name="sourceSelector">Source element selector to drag from</param>
+    /// <param name="targetSelector">Target element selector to drag to</param>
+    /// <param name="options">Optional drag options</param>
+    public async Task DragToAsync(string sourceSelector, string targetSelector, LocatorDragToOptions? options = null)
+    {
+        Logger.LogDebug("Dragging element from {Source} to {Target}", sourceSelector, targetSelector);
+        
+        try
+        {
+            var sourceElement = Page.Locator(sourceSelector);
+            var targetElement = Page.Locator(targetSelector);
+            
+            // Wait for both elements to be visible
+            await sourceElement.WaitForAsync(new LocatorWaitForOptions 
+            { 
+                State = WaitForSelectorState.Visible,
+                Timeout = Config.Browser.TimeoutMs 
+            });
+            
+            await targetElement.WaitForAsync(new LocatorWaitForOptions 
+            { 
+                State = WaitForSelectorState.Visible,
+                Timeout = Config.Browser.TimeoutMs 
+            });
+            
+            // Perform drag operation
+            await sourceElement.DragToAsync(targetElement, options);
+            
+            Logger.LogDebug("Successfully dragged element from {Source} to {Target}", sourceSelector, targetSelector);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to drag element from {Source} to {Target}", sourceSelector, targetSelector);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Zooms in the page by the specified percentage
+    /// </summary>
+    /// <param name="percentage">Zoom percentage (e.g., 150 for 150%)</param>
+    /// <param name="selector">Optional element selector to zoom relative to</param>
+    public async Task ZoomInAsync(int percentage, string? selector = null)
+    {
+        Logger.LogDebug("Zooming in to {Percentage}%{Selector}", percentage, selector != null ? $" on element: {selector}" : "");
+        
+        try
+        {
+            var zoomLevel = percentage / 100.0;
+            
+            if (selector != null)
+            {
+                // Zoom relative to specific element
+                await Page.EvaluateAsync($@"
+                    const element = document.querySelector('{selector}');
+                    if (element) {{
+                        element.style.transform = 'scale({zoomLevel})';
+                        element.style.transformOrigin = 'center center';
+                    }}
+                ");
+            }
+            else
+            {
+                // Zoom entire page
+                await Page.EvaluateAsync($@"
+                    document.body.style.zoom = '{zoomLevel}';
+                ");
+            }
+            
+            Logger.LogDebug("Successfully zoomed in to {Percentage}%", percentage);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to zoom in to {Percentage}%", percentage);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Zooms out the page by the specified percentage
+    /// </summary>
+    /// <param name="percentage">Zoom percentage (e.g., 75 for 75%)</param>
+    /// <param name="selector">Optional element selector to zoom relative to</param>
+    public async Task ZoomOutAsync(int percentage, string? selector = null)
+    {
+        Logger.LogDebug("Zooming out to {Percentage}%{Selector}", percentage, selector != null ? $" on element: {selector}" : "");
+        
+        try
+        {
+            var zoomLevel = percentage / 100.0;
+            
+            if (selector != null)
+            {
+                // Zoom relative to specific element
+                await Page.EvaluateAsync($@"
+                    const element = document.querySelector('{selector}');
+                    if (element) {{
+                        element.style.transform = 'scale({zoomLevel})';
+                        element.style.transformOrigin = 'center center';
+                    }}
+                ");
+            }
+            else
+            {
+                // Zoom entire page
+                await Page.EvaluateAsync($@"
+                    document.body.style.zoom = '{zoomLevel}';
+                ");
+            }
+            
+            Logger.LogDebug("Successfully zoomed out to {Percentage}%", percentage);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to zoom out to {Percentage}%", percentage);
+            throw;
+        }
+    }
+
+    #endregion
 } 
