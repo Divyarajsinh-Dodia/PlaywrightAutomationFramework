@@ -449,4 +449,161 @@ public abstract class BasePage
         await Page.GoForwardAsync(options);
         Logger.LogDebug("Went forward in browser history");
     }
+
+    #region Visibility-Aware Methods
+
+    /// <summary>
+    /// Clicks the first visible element matching the selector
+    /// </summary>
+    /// <param name="selector">Element selector</param>
+    /// <param name="options">Click options</param>
+    public async Task ClickVisibleAsync(string selector, LocatorClickOptions? options = null)
+    {
+        Logger.LogDebug("Clicking first visible element: {Selector}", selector);
+        
+        try
+        {
+            var visibleElement = Page.Locator(selector).Locator(":visible").First;
+            await visibleElement.WaitForAsync(new LocatorWaitForOptions 
+            { 
+                State = WaitForSelectorState.Visible,
+                Timeout = Config.Browser.TimeoutMs 
+            });
+            await visibleElement.ClickAsync(options);
+            Logger.LogDebug("Successfully clicked visible element: {Selector}", selector);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to click visible element: {Selector}", selector);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Fills the first visible input element matching the selector
+    /// </summary>
+    /// <param name="selector">Input element selector</param>
+    /// <param name="text">Text to fill</param>
+    /// <param name="options">Fill options</param>
+    public async Task FillVisibleAsync(string selector, string text, LocatorFillOptions? options = null)
+    {
+        Logger.LogDebug("Filling first visible element: {Selector} with text: {Text}", selector, text);
+        
+        try
+        {
+            var visibleElement = Page.Locator(selector).Locator(":visible").First;
+            await visibleElement.WaitForAsync(new LocatorWaitForOptions 
+            { 
+                State = WaitForSelectorState.Visible,
+                Timeout = Config.Browser.TimeoutMs 
+            });
+            await visibleElement.FillAsync(text, options);
+            Logger.LogDebug("Successfully filled visible element: {Selector}", selector);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to fill visible element: {Selector}", selector);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Checks if any element matching the selector is visible
+    /// </summary>
+    /// <param name="selector">Element selector</param>
+    /// <param name="timeout">Optional timeout in milliseconds</param>
+    /// <returns>True if any element is visible, false otherwise</returns>
+    public async Task<bool> IsAnyVisibleAsync(string selector, int? timeout = null)
+    {
+        Logger.LogDebug("Checking if any element is visible: {Selector}", selector);
+        
+        try
+        {
+            var timeoutMs = timeout ?? 1000; // Short timeout for visibility check
+            var visibleElements = Page.Locator(selector).Locator(":visible");
+            
+            // Wait briefly to see if any elements become visible
+            await visibleElements.First.WaitForAsync(new LocatorWaitForOptions 
+            { 
+                State = WaitForSelectorState.Visible,
+                Timeout = timeoutMs 
+            });
+            
+            var count = await visibleElements.CountAsync();
+            var isVisible = count > 0;
+            
+            Logger.LogDebug("Visibility check for {Selector}: {IsVisible} ({Count} visible elements)", 
+                selector, isVisible, count);
+            return isVisible;
+        }
+        catch (TimeoutException)
+        {
+            Logger.LogDebug("No visible elements found for: {Selector}", selector);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error checking visibility for: {Selector}", selector);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Waits for at least one element matching the selector to become visible
+    /// </summary>
+    /// <param name="selector">Element selector</param>
+    /// <param name="timeoutMs">Timeout in milliseconds</param>
+    /// <returns>First visible element or null if timeout</returns>
+    public async Task<ILocator?> WaitForVisibleElementAsync(string selector, int? timeoutMs = null)
+    {
+        var timeout = timeoutMs ?? Config.Browser.TimeoutMs;
+        Logger.LogDebug("Waiting for visible element: {Selector} (timeout: {Timeout}ms)", selector, timeout);
+        
+        try
+        {
+            var visibleElement = Page.Locator(selector).Locator(":visible").First;
+            await visibleElement.WaitForAsync(new LocatorWaitForOptions 
+            { 
+                State = WaitForSelectorState.Visible,
+                Timeout = timeout 
+            });
+            
+            Logger.LogDebug("Found visible element: {Selector}", selector);
+            return visibleElement;
+        }
+        catch (TimeoutException)
+        {
+            Logger.LogWarning("No visible element found within {Timeout}ms: {Selector}", timeout, selector);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error waiting for visible element: {Selector}", selector);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Gets the text content of the first visible element matching the selector
+    /// </summary>
+    /// <param name="selector">Element selector</param>
+    /// <param name="timeout">Optional timeout in milliseconds</param>
+    /// <returns>Text content of the first visible element</returns>
+    public async Task<string?> GetVisibleTextAsync(string selector, int? timeout = null)
+    {
+        Logger.LogDebug("Getting text from first visible element: {Selector}", selector);
+        
+        var visibleElement = await WaitForVisibleElementAsync(selector, timeout);
+        if (visibleElement == null)
+        {
+            Logger.LogWarning("No visible element found to get text from: {Selector}", selector);
+            return null;
+        }
+        
+        var text = await visibleElement.TextContentAsync();
+        Logger.LogDebug("Got text from visible element {Selector}: {Text}", selector, text);
+        return text;
+    }
+
+    #endregion
 } 

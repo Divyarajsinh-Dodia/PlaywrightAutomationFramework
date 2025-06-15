@@ -121,6 +121,24 @@ public class LoginPage : BasePage
     }
 
     /// <summary>
+    /// Enters username using visibility-aware method (improved version)
+    /// </summary>
+    /// <param name="username">Username to enter</param>
+    [AllureStep("Enter username (visibility-aware): {username}")]
+    public async Task<LoginPage> EnterUsernameVisibleAsync(string username)
+    {
+        // Use the new visibility-aware method
+        await FillVisibleAsync(UsernameInputSelector, username);
+        Logger.LogDebug("Entered username in visible field: {Username}", username);
+        
+        // Click next button only if it's visible
+        await ClickVisibleAsync(UsernameNextButtonSelector);
+        Logger.LogDebug("Clicked visible next button after entering username");
+        await WaitForLoadAsync(WaitUntilState.NetworkIdle);
+        return this;
+    }
+
+    /// <summary>
     /// Enters password in the password field
     /// </summary>
     /// <param name="password">Password to enter</param>
@@ -135,10 +153,28 @@ public class LoginPage : BasePage
         return this;
     }
 
+    /// <summary>
+    /// Enters password using visibility-aware method (improved version)
+    /// </summary>
+    /// <param name="password">Password to enter</param>
+    [AllureStep("Enter password (visibility-aware)")]
+    public async Task<LoginPage> EnterPasswordVisibleAsync(string password)
+    {
+        // Use the new visibility-aware method
+        await FillVisibleAsync(PasswordInputSelector, password);
+        Logger.LogDebug("Entered password in visible field");
+        
+        // Click sign in button only if it's visible
+        await ClickVisibleAsync(SignInButtonSelector);
+        Logger.LogDebug("Clicked visible sign in button after entering password");
+        await WaitForLoadAsync(WaitUntilState.NetworkIdle);
+        return this;
+    }
+
     [AllureStep("Enter SMS")]
     public async Task<LoginPage> EnterSMSAsync()
     {
-        await ClickAsync(SendSMSButtonSelector);
+        await ClickVisibleAsync(SendSMSButtonSelector);
         await WaitForLoadAsync(WaitUntilState.NetworkIdle);
         await FillAsync(OTPInputSelector, GetSMSMessage());
         await ClickAsync(VerifyButtonSelector);
@@ -146,224 +182,133 @@ public class LoginPage : BasePage
         return this;
     }
 
-    ///// <summary>
-    ///// Clicks the login button
-    ///// </summary>
-    //[AllureStep("Click login button")]
-    //public async Task<LoginPage> ClickLoginButtonAsync()
-    //{
-    //    await ClickAsync(LoginButtonSelector);
-    //    Logger.LogDebug("Clicked login button");
-    //    return this;
-    //}
+    /// <summary>
+    /// Enters SMS using visibility-aware methods (improved version)
+    /// </summary>
+    [AllureStep("Enter SMS (visibility-aware)")]
+    public async Task<LoginPage> EnterSMSVisibleAsync()
+    {
+        // Wait for SMS button to be visible before clicking
+        var smsButton = await WaitForVisibleElementAsync(SendSMSButtonSelector);
+        if (smsButton == null)
+        {
+            throw new InvalidOperationException("SMS send button is not visible");
+        }
+        
+        await ClickVisibleAsync(SendSMSButtonSelector);
+        await WaitForLoadAsync(WaitUntilState.NetworkIdle);
+        
+        // Wait for OTP input to become visible
+        var otpInput = await WaitForVisibleElementAsync(OTPInputSelector, 10000);
+        if (otpInput == null)
+        {
+            throw new InvalidOperationException("OTP input field did not become visible");
+        }
+        
+        await FillVisibleAsync(OTPInputSelector, GetSMSMessage());
+        await ClickVisibleAsync(VerifyButtonSelector);
+        await WaitForLoadAsync(WaitUntilState.NetworkIdle);
+        return this;
+    }
 
-    ///// <summary>
-    ///// Performs complete login action with credentials
-    ///// </summary>
-    ///// <param name="username">Username</param>
-    ///// <param name="password">Password</param>
-    //[AllureStep("Login with username: {username}")]
-    //public async Task<LoginPage> LoginAsync(string username, string password)
-    //{
-    //    await EnterUsernameAsync(username);
-    //    await EnterPasswordAsync(password);
-    //    await ClickLoginButtonAsync();
+    /// <summary>
+    /// Performs complete login with visibility-aware methods
+    /// </summary>
+    /// <param name="username">Username</param>
+    /// <param name="password">Password</param>
+    [AllureStep("Complete login (visibility-aware) with username: {username}")]
+    public async Task<LoginPage> LoginVisibleAsync(string username, string password)
+    {
+        await EnterUsernameVisibleAsync(username);
+        await EnterPasswordVisibleAsync(password);
+        await EnterSMSVisibleAsync();
+        
+        Logger.LogInformation("Completed visibility-aware login for user: {Username}", username);
+        return this;
+    }
 
-    //    // Wait for login to complete (either success or error)
-    //    await WaitForLoginCompleteAsync();
+    /// <summary>
+    /// Checks if login form is visible and ready for interaction
+    /// </summary>
+    [AllureStep("Check if login form is ready")]
+    public async Task<bool> IsLoginFormReadyAsync()
+    {
+        Logger.LogDebug("Checking if login form is ready");
+        
+        // Check if all required login elements are visible
+        var usernameVisible = await IsAnyVisibleAsync(UsernameInputSelector);
+        var nextButtonVisible = await IsAnyVisibleAsync(UsernameNextButtonSelector);
+        
+        var isReady = usernameVisible && nextButtonVisible;
+        Logger.LogDebug("Login form ready status: {IsReady} (Username: {UsernameVisible}, Next: {NextVisible})", 
+            isReady, usernameVisible, nextButtonVisible);
+        
+        return isReady;
+    }
 
-    //    Logger.LogInformation("Login attempt completed for user: {Username}", username);
-    //    return this;
-    //}
+    /// <summary>
+    /// Checks if password form is visible and ready for interaction
+    /// </summary>
+    [AllureStep("Check if password form is ready")]
+    public async Task<bool> IsPasswordFormReadyAsync()
+    {
+        Logger.LogDebug("Checking if password form is ready");
+        
+        var passwordVisible = await IsAnyVisibleAsync(PasswordInputSelector);
+        var signInVisible = await IsAnyVisibleAsync(SignInButtonSelector);
+        
+        var isReady = passwordVisible && signInVisible;
+        Logger.LogDebug("Password form ready status: {IsReady} (Password: {PasswordVisible}, SignIn: {SignInVisible})", 
+            isReady, passwordVisible, signInVisible);
+        
+        return isReady;
+    }
 
-    ///// <summary>
-    ///// Performs login using user credentials from configuration
-    ///// </summary>
-    ///// <param name="userRole">User role (optional, uses default if not specified)</param>
-    //[AllureStep("Login with user role: {userRole}")]
-    //public async Task<LoginPage> LoginWithUserRoleAsync(string? userRole = null)
-    //{
-    //    var testDataHelper = new Core.Helpers.TestDataHelper(Config, Logger);
-    //    var credentials = testDataHelper.GetUserCredentials(userRole);
+    /// <summary>
+    /// Checks if SMS verification form is visible
+    /// </summary>
+    [AllureStep("Check if SMS form is ready")]
+    public async Task<bool> IsSMSFormReadyAsync()
+    {
+        Logger.LogDebug("Checking if SMS form is ready");
+        
+        var smsButtonVisible = await IsAnyVisibleAsync(SendSMSButtonSelector);
+        var otpInputVisible = await IsAnyVisibleAsync(OTPInputSelector, 500); // Short timeout for OTP check
+        
+        var isReady = smsButtonVisible || otpInputVisible;
+        Logger.LogDebug("SMS form ready status: {IsReady} (SMS Button: {SmsVisible}, OTP Input: {OtpVisible})", 
+            isReady, smsButtonVisible, otpInputVisible);
+        
+        return isReady;
+    }
 
-    //    return await LoginAsync(credentials.Username, credentials.Password);
-    //}
-
-    ///// <summary>
-    ///// Toggles the "Remember Me" checkbox
-    ///// </summary>
-    //[AllureStep("Toggle remember me checkbox")]
-    //public async Task<LoginPage> ToggleRememberMeAsync()
-    //{
-    //    await ClickAsync(RememberMeCheckboxSelector);
-    //    Logger.LogDebug("Toggled remember me checkbox");
-    //    return this;
-    //}
-
-    ///// <summary>
-    ///// Clicks the "Show Password" button to toggle password visibility
-    ///// </summary>
-    //[AllureStep("Toggle password visibility")]
-    //public async Task<LoginPage> TogglePasswordVisibilityAsync()
-    //{
-    //    await ClickAsync(ShowPasswordButtonSelector);
-    //    Logger.LogDebug("Toggled password visibility");
-    //    return this;
-    //}
-
-    ///// <summary>
-    ///// Clicks the "Forgot Password" link
-    ///// </summary>
-    //[AllureStep("Click forgot password link")]
-    //public async Task<LoginPage> ClickForgotPasswordAsync()
-    //{
-    //    await ClickAsync(ForgotPasswordLinkSelector);
-    //    Logger.LogDebug("Clicked forgot password link");
-    //    return this;
-    //}
-
-    ///// <summary>
-    ///// Waits for login process to complete (success or failure)
-    ///// </summary>
-    //private async Task WaitForLoginCompleteAsync()
-    //{
-    //    // Wait for loading spinner to disappear or error message to appear
-    //    try
-    //    {
-    //        // First wait for loading spinner if it appears
-    //        if (await IsVisibleAsync(LoadingSpinnerSelector))
-    //        {
-    //            await WaitForElementToBeHiddenAsync(LoadingSpinnerSelector);
-    //        }
-
-    //        // Give a moment for the result to be processed
-    //        await Task.Delay(1000);
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        Logger.LogDebug("No loading spinner found or error waiting for login completion: {Error}", ex.Message);
-    //    }
-    //}
-
-    //// Validation Methods
-
-    ///// <summary>
-    ///// Checks if an error message is displayed
-    ///// </summary>
-    ///// <returns>True if error message is visible</returns>
-    //[AllureStep("Check if error message is displayed")]
-    //public async Task<bool> IsErrorMessageDisplayedAsync()
-    //{
-    //    var isVisible = await IsVisibleAsync(ErrorMessageSelector);
-    //    Logger.LogDebug("Error message visible: {IsVisible}", isVisible);
-    //    return isVisible;
-    //}
-
-    ///// <summary>
-    ///// Gets the error message text
-    ///// </summary>
-    ///// <returns>Error message text or empty string if not visible</returns>
-    //[AllureStep("Get error message text")]
-    //public async Task<string> GetErrorMessageAsync()
-    //{
-    //    if (await IsErrorMessageDisplayedAsync())
-    //    {
-    //        var errorText = await GetTextAsync(ErrorMessageSelector) ?? string.Empty;
-    //        Logger.LogDebug("Error message: {ErrorMessage}", errorText);
-    //        return errorText;
-    //    }
-    //    return string.Empty;
-    //}
-
-    ///// <summary>
-    ///// Checks if the login button is enabled
-    ///// </summary>
-    ///// <returns>True if login button is enabled</returns>
-    //[AllureStep("Check if login button is enabled")]
-    //public async Task<bool> IsLoginButtonEnabledAsync()
-    //{
-    //    var isEnabled = await IsEnabledAsync(LoginButtonSelector);
-    //    Logger.LogDebug("Login button enabled: {IsEnabled}", isEnabled);
-    //    return isEnabled;
-    //}
-
-    ///// <summary>
-    ///// Checks if the remember me checkbox is checked
-    ///// </summary>
-    ///// <returns>True if remember me is checked</returns>
-    //[AllureStep("Check if remember me is checked")]
-    //public async Task<bool> IsRememberMeCheckedAsync()
-    //{
-    //    var isChecked = await IsCheckedAsync(RememberMeCheckboxSelector);
-    //    Logger.LogDebug("Remember me checked: {IsChecked}", isChecked);
-    //    return isChecked;
-    //}
-
-    ///// <summary>
-    ///// Validates that all required elements are present on the page
-    ///// </summary>
-    ///// <returns>True if all elements are present</returns>
-    //[AllureStep("Validate login page elements")]
-    //public async Task<bool> ValidatePageElementsAsync()
-    //{
-    //    var elementsToCheck = new[]
-    //    {
-    //        UsernameInputSelector,
-    //        PasswordInputSelector,
-    //        LoginButtonSelector,
-    //        RememberMeCheckboxSelector,
-    //        ForgotPasswordLinkSelector
-    //    };
-
-    //    foreach (var selector in elementsToCheck)
-    //    {
-    //        if (!await IsVisibleAsync(selector))
-    //        {
-    //            Logger.LogError("Required element not found: {Selector}", selector);
-    //            return false;
-    //        }
-    //    }
-
-    //    Logger.LogInformation("All login page elements are present");
-    //    return true;
-    //}
-
-    ///// <summary>
-    ///// Gets the current values from the form fields
-    ///// </summary>
-    ///// <returns>Dictionary containing form field values</returns>
-    //[AllureStep("Get form field values")]
-    //public async Task<Dictionary<string, string>> GetFormValuesAsync()
-    //{
-    //    var values = new Dictionary<string, string>
-    //    {
-    //        ["username"] = await GetAttributeAsync(UsernameInputSelector, "value") ?? string.Empty,
-    //        ["password"] = await GetAttributeAsync(PasswordInputSelector, "value") ?? string.Empty,
-    //        ["rememberMe"] = (await IsRememberMeCheckedAsync()).ToString()
-    //    };
-
-    //    Logger.LogDebug("Retrieved form values");
-    //    return values;
-    //}
-
-    ///// <summary>
-    ///// Clears all form fields
-    ///// </summary>
-    //[AllureStep("Clear all form fields")]
-    //public async Task<LoginPage> ClearFormAsync()
-    //{
-    //    await ClearAsync(UsernameInputSelector);
-    //    await ClearAsync(PasswordInputSelector);
-
-    //    // Uncheck remember me if it's checked
-    //    if (await IsRememberMeCheckedAsync())
-    //    {
-    //        await ToggleRememberMeAsync();
-    //    }
-
-    //    Logger.LogDebug("Cleared all form fields");
-    //    return this;
-    //}
+    /// <summary>
+    /// Gets the current login step based on visible elements
+    /// </summary>
+    [AllureStep("Detect current login step")]
+    public async Task<string> GetCurrentLoginStepAsync()
+    {
+        if (await IsAnyVisibleAsync(UsernameInputSelector))
+        {
+            return "Username";
+        }
+        else if (await IsAnyVisibleAsync(PasswordInputSelector))
+        {
+            return "Password";
+        }
+        else if (await IsAnyVisibleAsync(SendSMSButtonSelector))
+        {
+            return "SMS_Selection";
+        }
+        else if (await IsAnyVisibleAsync(OTPInputSelector))
+        {
+            return "OTP_Entry";
+        }
+        else
+        {
+            return "Unknown";
+        }
+    }
 
     /// <summary>
     /// Takes a screenshot of the login page

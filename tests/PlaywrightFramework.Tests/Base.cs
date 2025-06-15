@@ -53,21 +53,23 @@ namespace PlaywrightFramework.Tests
         /// </summary>
         private async Task SetupLoginAsync()
         {
-            Logger.LogInformation("Starting one-time login setup for test class");
+            Logger.LogInformation("Starting one-time login setup for test class using visibility-aware methods");
             
             var loginLogger = Logger as ILogger<LoginPage> ??
                 new Microsoft.Extensions.Logging.Abstractions.NullLogger<LoginPage>();
             _loginPage = new LoginPage(Page, Config, loginLogger);
             
             await _loginPage.NavigateToLoginPageAsync();
-            await _loginPage.EnterUsernameAsync("divyaraj.dodia.ext@envu.com");
-            await _loginPage.EnterPasswordAsync("May@1617");
-            await _loginPage.EnterSMSAsync();
+            
+            // Use visibility-aware methods for more reliable login
+            await _loginPage.EnterUsernameVisibleAsync("divyaraj.dodia.ext@envu.com");
+            await _loginPage.EnterPasswordVisibleAsync("May@1617");
+            await _loginPage.EnterSMSVisibleAsync();
             
             // Initialize dashboard page for use in tests
             _dashboardPage = CreateDashboardPage();
             
-            Logger.LogInformation("One-time login setup completed successfully");
+            Logger.LogInformation("One-time login setup completed successfully using visibility-aware methods");
         }
 
         /// <summary>
