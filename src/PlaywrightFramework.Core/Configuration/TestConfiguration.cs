@@ -188,6 +188,21 @@ public class ExecutionConfiguration
     /// Output directory for test artifacts
     /// </summary>
     public string OutputDirectory { get; set; } = "TestResults";
+
+    /// <summary>
+    /// Whether to highlight elements during interactions (shows red borders)
+    /// </summary>
+    public bool HighlightElements { get; set; } = true;
+
+    /// <summary>
+    /// Duration to show element highlighting in milliseconds
+    /// </summary>
+    public int HighlightDurationMs { get; set; } = 1500;
+
+    /// <summary>
+    /// Border width for element highlighting
+    /// </summary>
+    public int HighlightBorderWidth { get; set; } = 3;
 }
 
 /// <summary>
