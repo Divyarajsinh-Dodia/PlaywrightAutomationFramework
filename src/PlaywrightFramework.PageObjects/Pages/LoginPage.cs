@@ -330,4 +330,183 @@ public class LoginPage : BasePage
         
         return screenshotPath;
     }
+
+    #region JavaScript Action Methods
+
+    /// <summary>
+    /// Enters username using JavaScript (fallback method for difficult scenarios)
+    /// </summary>
+    /// <param name="username">Username to enter</param>
+    [AllureStep("Enter username using JavaScript: {username}")]
+    public async Task<LoginPage> EnterUsernameJavaScriptAsync(string username)
+    {
+        Logger.LogDebug("Entering username using JavaScript: {Username}", username);
+        
+        // Scroll to username field first
+        await ScrollToLocatorJavaScriptAsync(UsernameInputSelector);
+        
+        // Clear any existing value and fill with JavaScript
+        await ClearJavaScriptAsync(UsernameInputSelector);
+        await FillJavaScriptAsync(UsernameInputSelector, username);
+        
+        // Click next button using JavaScript
+        await ClickJavaScriptAsync(UsernameNextButtonSelector);
+        await WaitForLoadAsync(WaitUntilState.NetworkIdle);
+        
+        Logger.LogDebug("Successfully entered username using JavaScript");
+        return this;
+    }
+
+    /// <summary>
+    /// Enters password using JavaScript (fallback method for difficult scenarios)
+    /// </summary>
+    /// <param name="password">Password to enter</param>
+    [AllureStep("Enter password using JavaScript")]
+    public async Task<LoginPage> EnterPasswordJavaScriptAsync(string password)
+    {
+        Logger.LogDebug("Entering password using JavaScript");
+        
+        // Scroll to password field first
+        await ScrollToLocatorJavaScriptAsync(PasswordInputSelector);
+        
+        // Clear any existing value and fill with JavaScript
+        await ClearJavaScriptAsync(PasswordInputSelector);
+        await FillJavaScriptAsync(PasswordInputSelector, password);
+        
+        // Click sign in button using JavaScript
+        await ClickJavaScriptAsync(SignInButtonSelector);
+        await WaitForLoadAsync(WaitUntilState.NetworkIdle);
+        
+        Logger.LogDebug("Successfully entered password using JavaScript");
+        return this;
+    }
+
+    /// <summary>
+    /// Enters SMS OTP using JavaScript (fallback method for difficult scenarios)
+    /// </summary>
+    [AllureStep("Enter SMS using JavaScript")]
+    public async Task<LoginPage> EnterSMSJavaScriptAsync()
+    {
+        Logger.LogDebug("Entering SMS using JavaScript");
+        
+        // Scroll to and click SMS button using JavaScript
+        await ScrollToLocatorJavaScriptAsync(SendSMSButtonSelector);
+        await ClickJavaScriptAsync(SendSMSButtonSelector);
+        await WaitForLoadAsync(WaitUntilState.NetworkIdle);
+        
+        // Wait for OTP input to appear, then scroll to it
+        var otpInput = await WaitForVisibleElementAsync(OTPInputSelector, 10000);
+        if (otpInput == null)
+        {
+            throw new InvalidOperationException("OTP input field did not become visible");
+        }
+        
+        await ScrollToLocatorJavaScriptAsync(OTPInputSelector);
+        
+        // Clear and fill OTP using JavaScript
+        await ClearJavaScriptAsync(OTPInputSelector);
+        await FillJavaScriptAsync(OTPInputSelector, GetSMSMessage());
+        
+        // Click verify button using JavaScript
+        await ClickJavaScriptAsync(VerifyButtonSelector);
+        await WaitForLoadAsync(WaitUntilState.NetworkIdle);
+        
+        Logger.LogDebug("Successfully entered SMS using JavaScript");
+        return this;
+    }
+
+    /// <summary>
+    /// Performs complete login using JavaScript methods (ultimate fallback)
+    /// </summary>
+    /// <param name="username">Username</param>
+    /// <param name="password">Password</param>
+    [AllureStep("Complete login using JavaScript methods: {username}")]
+    public async Task<LoginPage> LoginJavaScriptAsync(string username, string password)
+    {
+        Logger.LogInformation("Starting complete login using JavaScript methods");
+        
+        await EnterUsernameJavaScriptAsync(username);
+        await EnterPasswordJavaScriptAsync(password);
+        await EnterSMSJavaScriptAsync();
+        
+        Logger.LogInformation("Completed login using JavaScript methods for user: {Username}", username);
+        return this;
+    }
+
+    /// <summary>
+    /// Force clicks any login element that might be obscured (emergency method)
+    /// </summary>
+    /// <param name="elementSelector">Selector of element to force click</param>
+    [AllureStep("Force click login element using JavaScript")]
+    public async Task<LoginPage> ForceClickLoginElementAsync(string elementSelector)
+    {
+        Logger.LogDebug("Force clicking login element using JavaScript: {Selector}", elementSelector);
+        
+        // Scroll to element first
+        await ScrollToLocatorJavaScriptAsync(elementSelector);
+        
+        // Force click using JavaScript
+        await ClickJavaScriptAsync(elementSelector);
+        
+        Logger.LogDebug("Successfully force clicked login element: {Selector}", elementSelector);
+        return this;
+    }
+
+    /// <summary>
+    /// Double clicks an element for special interactions (e.g., text selection)
+    /// </summary>
+    /// <param name="elementSelector">Selector of element to double click</param>
+    [AllureStep("Double click element using JavaScript")]
+    public async Task<LoginPage> DoubleClickElementAsync(string elementSelector)
+    {
+        Logger.LogDebug("Double clicking element using JavaScript: {Selector}", elementSelector);
+        
+        // Scroll to element first
+        await ScrollToLocatorJavaScriptAsync(elementSelector);
+        
+        // Double click using JavaScript
+        await DoubleClickJavaScriptAsync(elementSelector);
+        
+        Logger.LogDebug("Successfully double clicked element: {Selector}", elementSelector);
+        return this;
+    }
+
+    /// <summary>
+    /// Clears all login form fields using JavaScript (reset form)
+    /// </summary>
+    [AllureStep("Clear all login form fields using JavaScript")]
+    public async Task<LoginPage> ClearAllLoginFieldsJavaScriptAsync()
+    {
+        Logger.LogDebug("Clearing all login form fields using JavaScript");
+        
+        var fieldsToCheck = new[]
+        {
+            UsernameInputSelector,
+            PasswordInputSelector,
+            OTPInputSelector
+        };
+        
+        foreach (var field in fieldsToCheck)
+        {
+            try
+            {
+                // Check if field exists and is visible before clearing
+                if (await IsAnyVisibleAsync(field, 1000))
+                {
+                    await ClearJavaScriptAsync(field);
+                    Logger.LogDebug("Cleared field: {Field}", field);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug("Could not clear field {Field}: {Error}", field, ex.Message);
+                // Continue with other fields
+            }
+        }
+        
+        Logger.LogDebug("Completed clearing all visible login form fields");
+        return this;
+    }
+
+    #endregion
 } 

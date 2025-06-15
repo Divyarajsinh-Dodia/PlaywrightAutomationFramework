@@ -606,4 +606,188 @@ public abstract class BasePage
     }
 
     #endregion
+
+    #region JavaScript Actions
+
+    /// <summary>
+    /// Clicks an element using JavaScript (bypasses Playwright's clickability checks)
+    /// </summary>
+    /// <param name="selector">Element selector</param>
+    public async Task ClickJavaScriptAsync(string selector)
+    {
+        Logger.LogDebug("Clicking element using JavaScript: {Selector}", selector);
+        
+        try
+        {
+            await Page.EvaluateAsync($@"
+                const element = document.querySelector('{selector}');
+                if (!element) throw new Error('Element not found: {selector}');
+                element.click();
+            ");
+            
+            Logger.LogDebug("Successfully clicked element using JavaScript: {Selector}", selector);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to click element using JavaScript: {Selector}", selector);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Fills an input element using JavaScript (bypasses validation and triggers events)
+    /// </summary>
+    /// <param name="selector">Input element selector</param>
+    /// <param name="text">Text to fill</param>
+    public async Task FillJavaScriptAsync(string selector, string text)
+    {
+        Logger.LogDebug("Filling element using JavaScript: {Selector} with text: {Text}", selector, text);
+        
+        try
+        {
+            // Escape the text to prevent JavaScript injection
+            var escapedText = text.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", "\\r");
+            
+            await Page.EvaluateAsync($@"
+                const element = document.querySelector('{selector}');
+                if (!element) throw new Error('Element not found: {selector}');
+                
+                element.value = '{escapedText}';
+                element.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                element.dispatchEvent(new Event('change', {{ bubbles: true }}));
+            ");
+            
+            Logger.LogDebug("Successfully filled element using JavaScript: {Selector}", selector);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to fill element using JavaScript: {Selector}", selector);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Scrolls to an element using JavaScript with smooth animation
+    /// </summary>
+    /// <param name="selector">Element selector to scroll to</param>
+    /// <param name="behavior">Scroll behavior: 'smooth', 'instant', or 'auto'</param>
+    /// <param name="block">Vertical alignment: 'start', 'center', 'end', or 'nearest'</param>
+    /// <param name="inline">Horizontal alignment: 'start', 'center', 'end', or 'nearest'</param>
+    public async Task ScrollToLocatorJavaScriptAsync(string selector, string behavior = "smooth", string block = "center", string inline = "nearest")
+    {
+        Logger.LogDebug("Scrolling to element using JavaScript: {Selector}", selector);
+        
+        try
+        {
+            await Page.EvaluateAsync($@"
+                const element = document.querySelector('{selector}');
+                if (!element) throw new Error('Element not found: {selector}');
+                
+                element.scrollIntoView({{
+                    behavior: '{behavior}',
+                    block: '{block}',
+                    inline: '{inline}'
+                }});
+            ");
+            
+            // Wait a moment for scroll to complete
+            await Task.Delay(500);
+            
+            Logger.LogDebug("Successfully scrolled to element using JavaScript: {Selector}", selector);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to scroll to element using JavaScript: {Selector}", selector);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Double clicks an element using JavaScript
+    /// </summary>
+    /// <param name="selector">Element selector</param>
+    public async Task DoubleClickJavaScriptAsync(string selector)
+    {
+        Logger.LogDebug("Double clicking element using JavaScript: {Selector}", selector);
+        
+        try
+        {
+            await Page.EvaluateAsync($@"
+                const element = document.querySelector('{selector}');
+                if (!element) throw new Error('Element not found: {selector}');
+                
+                const event = new MouseEvent('dblclick', {{
+                    view: window,
+                    bubbles: true,
+                    cancelable: true,
+                    detail: 2
+                }});
+                
+                element.dispatchEvent(event);
+            ");
+            
+            Logger.LogDebug("Successfully double clicked element using JavaScript: {Selector}", selector);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to double click element using JavaScript: {Selector}", selector);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Clears an input element using JavaScript (removes all content and triggers events)
+    /// </summary>
+    /// <param name="selector">Input element selector</param>
+    public async Task ClearJavaScriptAsync(string selector)
+    {
+        Logger.LogDebug("Clearing element using JavaScript: {Selector}", selector);
+        
+        try
+        {
+            await Page.EvaluateAsync($@"
+                const element = document.querySelector('{selector}');
+                if (!element) throw new Error('Element not found: {selector}');
+                
+                element.value = '';
+                element.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                element.dispatchEvent(new Event('change', {{ bubbles: true }}));
+            ");
+            
+            Logger.LogDebug("Successfully cleared element using JavaScript: {Selector}", selector);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to clear element using JavaScript: {Selector}", selector);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Clears the value property of an element without triggering events (silent clear)
+    /// </summary>
+    /// <param name="selector">Element selector</param>
+    public async Task ClearValueJavaScriptAsync(string selector)
+    {
+        Logger.LogDebug("Clearing element value using JavaScript (silent): {Selector}", selector);
+        
+        try
+        {
+            await Page.EvaluateAsync($@"
+                const element = document.querySelector('{selector}');
+                if (!element) throw new Error('Element not found: {selector}');
+                
+                element.value = '';
+            ");
+            
+            Logger.LogDebug("Successfully cleared element value using JavaScript: {Selector}", selector);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to clear element value using JavaScript: {Selector}", selector);
+            throw;
+        }
+    }
+
+    #endregion
 } 
