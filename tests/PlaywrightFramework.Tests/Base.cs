@@ -7,30 +7,80 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Playwright;
 
 namespace PlaywrightFramework.Tests
 {
     public class Base : BaseTest
     {
-        private LoginPage _loginPage = null!;
+        protected LoginPage _loginPage = null!;
+        protected DashboardPage _dashboardPage = null!;
+        
+        // Static flag to track if login has been performed for this test class
+        private static bool _loginPerformed = false;
+        private static readonly object _loginLock = new object();
 
-        //private DashboardPage CreateDashboardPage()
-        //{
-        //    var dashboardLogger = Logger as ILogger<DashboardPage> ??
-        //        new Microsoft.Extensions.Logging.Abstractions.NullLogger<DashboardPage>();
-        //    return new DashboardPage(Page, Config, dashboardLogger);
-        //}
-
-        [OneTimeSetUp]
-        public async Task SetupLoginTests()
+        private DashboardPage CreateDashboardPage()
         {
+            var dashboardLogger = Logger as ILogger<DashboardPage> ??
+                new Microsoft.Extensions.Logging.Abstractions.NullLogger<DashboardPage>();
+            return new DashboardPage(Page, Config, dashboardLogger);
+        }
+
+        /// <summary>
+        /// Override the base SetUp to include one-time login setup
+        /// This ensures login happens only once per test class
+        /// </summary>
+        public override async Task SetUpAsync()
+        {
+            // Call the base setup first (creates page, initializes helpers, etc.)
+            await base.SetUpAsync();
+            
+            // Perform login only once per test class
+            lock (_loginLock)
+            {
+                if (!_loginPerformed)
+                {
+                    // Perform login setup
+                    SetupLoginAsync().Wait();
+                    _loginPerformed = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Performs the login setup once per test class
+        /// </summary>
+        private async Task SetupLoginAsync()
+        {
+            Logger.LogInformation("Starting one-time login setup for test class");
+            
             var loginLogger = Logger as ILogger<LoginPage> ??
                 new Microsoft.Extensions.Logging.Abstractions.NullLogger<LoginPage>();
             _loginPage = new LoginPage(Page, Config, loginLogger);
+            
             await _loginPage.NavigateToLoginPageAsync();
             await _loginPage.EnterUsernameAsync("divyaraj.dodia.ext@envu.com");
             await _loginPage.EnterPasswordAsync("May@1617");
             await _loginPage.EnterSMSAsync();
+            
+            // Initialize dashboard page for use in tests
+            _dashboardPage = CreateDashboardPage();
+            
+            Logger.LogInformation("One-time login setup completed successfully");
+        }
+
+        /// <summary>
+        /// Reset the login flag when the test class is torn down
+        /// </summary>
+        public override async Task OneTimeTearDownAsync()
+        {
+            lock (_loginLock)
+            {
+                _loginPerformed = false;
+            }
+            
+            await base.OneTimeTearDownAsync();
         }
     }
 }

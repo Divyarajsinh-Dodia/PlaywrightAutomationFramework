@@ -1,6 +1,7 @@
 using ClosedXML.Excel;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
+using NUnit.Framework.Legacy;
 using PlaywrightFramework.Core.Base;
 using PlaywrightFramework.Core.Helpers;
 using PlaywrightFramework.PageObjects.Pages;
@@ -11,28 +12,10 @@ namespace PlaywrightFramework.Tests.Tests;
 /// Simplified login test suite demonstrating framework capabilities without Allure dependencies
 /// </summary>
 [TestFixture]
-public class LoginTestsSimple : Base
+public class LoginTestsSimple : Base  // Inherits from Base, which handles login setup
 {
-    //private LoginPage _loginPage = null!;
-    
-    //private DashboardPage CreateDashboardPage()
-    //{
-    //    var dashboardLogger = Logger as ILogger<DashboardPage> ?? 
-    //        new Microsoft.Extensions.Logging.Abstractions.NullLogger<DashboardPage>();
-    //    return new DashboardPage(Page, Config, dashboardLogger);
-    //}
-
-    //[SetUp]
-    //public async Task SetupLoginTests()
-    //{
-    //    var loginLogger = Logger as ILogger<LoginPage> ??
-    //        new Microsoft.Extensions.Logging.Abstractions.NullLogger<LoginPage>();
-    //    _loginPage = new LoginPage(Page, Config, loginLogger);
-    //    await _loginPage.NavigateToLoginPageAsync();
-    //    await _loginPage.EnterUsernameAsync("divyaraj.dodia.ext@envu.com");
-    //    await _loginPage.EnterPasswordAsync("May@1617");
-    //    await _loginPage.EnterSMSAsync();
-    //}
+    // No need for separate login setup - Base class handles it in OneTimeSetUpAsync
+    // The _loginPage and _dashboardPage are available from Base class
 
     private const string WORKSHEET_NAME = "InventoryMovement";
 
@@ -73,5 +56,7 @@ public class LoginTestsSimple : Base
     {
         Console.WriteLine($"Running login test with parameters: Environment={environment}, Entity={entity}, Warehouse={warehouse}, OffsetAccount={offsetAccount}, ItemNumber={itemNumber}, ItemQty={itemQty}, BatchNumber={batchNumber}, Location={location}");
         Console.WriteLine("Starting login test with valid credentials.");
+
+        StringAssert.Contains("US01", entity, "Entity should be US01");
     }
 } 

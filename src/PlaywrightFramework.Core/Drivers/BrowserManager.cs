@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Playwright;
 using PlaywrightFramework.Core.Configuration;
+using System.Linq;
 
 namespace PlaywrightFramework.Core.Drivers;
 
@@ -166,6 +167,23 @@ public class BrowserManager : IDisposable
     {
         var launchOptions = CreateLaunchOptions();
         
+        // Handle Firefox-specific maximization
+        if (browserType.ToLowerInvariant() == "firefox" && _config.Browser.StartMaximized)
+        {
+            // Firefox doesn't support --start-maximized, so we use different arguments
+            var firefoxArgs = launchOptions.Args?.ToList() ?? new List<string>();
+            firefoxArgs.RemoveAll(arg => arg == "--start-maximized"); // Remove if present
+            
+            // For Firefox, we can use --width and --height or just rely on the viewport size
+            if (!firefoxArgs.Any(arg => arg.StartsWith("--width")))
+            {
+                firefoxArgs.Add($"--width={_config.Browser.ViewportWidth}");
+                firefoxArgs.Add($"--height={_config.Browser.ViewportHeight}");
+            }
+            
+            launchOptions.Args = firefoxArgs;
+        }
+        
         IBrowser browser = browserType.ToLowerInvariant() switch
         {
             "chrome" or "chromium" => await _playwright!.Chromium.LaunchAsync(launchOptions),
@@ -191,11 +209,39 @@ public class BrowserManager : IDisposable
     /// <returns>Browser launch options</returns>
     private BrowserTypeLaunchOptions CreateLaunchOptions()
     {
+        var launchArgs = new List<string>(_config.Browser.LaunchArgs);
+        
+        // Add maximization arguments if StartMaximized is enabled and not in headless mode
+        if (_config.Browser.StartMaximized && !_config.Browser.Headless)
+        {
+            // For Chromium-based browsers (Chrome, Edge), use --start-maximized
+            if (!launchArgs.Contains("--start-maximized"))
+            {
+                launchArgs.Add("--start-maximized");
+                _logger.LogInformation("Added --start-maximized launch argument");
+            }
+            
+            // Remove any window-size arguments as they conflict with maximized mode
+            launchArgs.RemoveAll(arg => arg.StartsWith("--window-size"));
+            _logger.LogInformation("Removed window-size arguments to avoid conflicts with maximized mode");
+        }
+        else if (_config.Browser.StartMaximized && _config.Browser.Headless)
+        {
+            // In headless mode, use window-size instead of start-maximized
+            if (!launchArgs.Any(arg => arg.StartsWith("--window-size")))
+            {
+                var width = Math.Max(_config.Browser.ViewportWidth, 1920);
+                var height = Math.Max(_config.Browser.ViewportHeight, 1080);
+                launchArgs.Add($"--window-size={width},{height}");
+                _logger.LogInformation("Added --window-size={Width},{Height} for headless maximized mode", width, height);
+            }
+        }
+
         var options = new BrowserTypeLaunchOptions
         {
             Headless = _config.Browser.Headless,
             Timeout = _config.Browser.TimeoutMs,
-            Args = _config.Browser.LaunchArgs
+            Args = launchArgs
         };
 
         return options;
@@ -209,14 +255,38 @@ public class BrowserManager : IDisposable
     {
         var options = new BrowserNewContextOptions
         {
-            ViewportSize = new ViewportSize
-            {
-                Width = _config.Browser.ViewportWidth,
-                Height = _config.Browser.ViewportHeight
-            },
             AcceptDownloads = _config.Browser.AcceptDownloads,
             RecordVideoDir = _config.Execution.RecordVideo ? _config.Execution.OutputDirectory : null
         };
+
+        // Handle viewport size based on StartMaximized setting
+        if (_config.Browser.StartMaximized && !_config.Browser.Headless)
+        {
+            // When maximized and not headless, set viewport to null to let the browser use its natural window size
+            options.ViewportSize = ViewportSize.NoViewport; // This is the key for maximized mode
+            _logger.LogInformation("Viewport set to NULL (natural browser window size) for maximized mode");
+        }
+        else if (_config.Browser.StartMaximized && _config.Browser.Headless)
+        {
+            // In headless mode, we can't truly maximize, so use large viewport
+            options.ViewportSize = new ViewportSize
+            {
+                Width = Math.Max(_config.Browser.ViewportWidth, 1920),
+                Height = Math.Max(_config.Browser.ViewportHeight, 1080)
+            };
+            _logger.LogInformation("Headless mode detected - using large viewport {Width}x{Height} instead of maximized", 
+                options.ViewportSize.Width, options.ViewportSize.Height);
+        }
+        else
+        {
+            // Use configured viewport size
+            options.ViewportSize = new ViewportSize
+            {
+                Width = _config.Browser.ViewportWidth,
+                Height = _config.Browser.ViewportHeight
+            };
+            _logger.LogInformation("Viewport set to configured size {Width}x{Height}", _config.Browser.ViewportWidth, _config.Browser.ViewportHeight);
+        }
 
         // Note: Trace recording is handled separately through context.Tracing.StartAsync()
         // as RecordTraceDir is not available in newer Playwright versions
