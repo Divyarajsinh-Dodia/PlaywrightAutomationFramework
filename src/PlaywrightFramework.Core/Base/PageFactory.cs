@@ -36,45 +36,27 @@ public class PageFactory
     /// <returns>The page instance</returns>
     public T GetPage<T>() where T : class, IFluentPage
     {
-        return (T)_pageCache.GetOrAdd(typeof(T), CreatePage<T>);
-    }
-
-    /// <summary>
-    /// Creates a new instance of the specified page type
-    /// </summary>
-    private IFluentPage CreatePage<T>(Type pageType) where T : class, IFluentPage
-    {
-        // Try to find constructor that takes IPage, TestConfiguration, ILogger<T>, PageFactory
-        var genericLoggerType = typeof(ILogger<>).MakeGenericType(pageType);
-        var constructor = pageType.GetConstructor(new[] { 
-            typeof(IPage), 
-            typeof(TestConfiguration), 
-            genericLoggerType,
-            typeof(PageFactory) 
-        });
-
-        if (constructor != null)
+        return (T)_pageCache.GetOrAdd(typeof(T), type =>
         {
-            var logger = _loggerFactory.CreateLogger(pageType);
-            return (IFluentPage)constructor.Invoke(new object[] { _page, _config, logger, this });
-        }
-
-        // Try with just ILogger (non-generic)
-        constructor = pageType.GetConstructor(new[] { 
-            typeof(IPage), 
-            typeof(TestConfiguration), 
-            typeof(ILogger),
-            typeof(PageFactory) 
+            // Try constructor with ILogger<T>
+            var genericLoggerType = typeof(ILogger<>).MakeGenericType(type);
+            var ctorGeneric = type.GetConstructor(new[] { typeof(IPage), typeof(TestConfiguration), genericLoggerType, typeof(PageFactory) });
+            if (ctorGeneric != null)
+            {
+                // Create ILogger<T> via extension
+                var method = typeof(LoggerFactoryExtensions)
+                    .GetMethod(nameof(LoggerFactoryExtensions.CreateLogger), new[] { typeof(ILoggerFactory) })!;
+                var logger = method.MakeGenericMethod(type).Invoke(null, new object[] { _loggerFactory })!;
+                return (IFluentPage)ctorGeneric.Invoke(new object[] { _page, _config, logger, this });
+            }
+            // Fallback to non-generic ILogger
+            var ctor = type.GetConstructor(new[] { typeof(IPage), typeof(TestConfiguration), typeof(ILogger), typeof(PageFactory) });
+            if (ctor != null)
+            {
+                var logger = _loggerFactory.CreateLogger(type);
+                return (IFluentPage)ctor.Invoke(new object[] { _page, _config, logger, this });
+            }
+            throw new InvalidOperationException($"Cannot find suitable constructor for {type.Name}");
         });
-
-        if (constructor != null)
-        {
-            var logger = _loggerFactory.CreateLogger(pageType);
-            return (IFluentPage)constructor.Invoke(new object[] { _page, _config, logger, this });
-        }
-
-        throw new InvalidOperationException(
-            $"Cannot create an instance of {pageType}. " +
-            $"Expected constructor: {pageType.Name}(IPage, TestConfiguration, ILogger<{pageType.Name}>, PageFactory)");
     }
 }

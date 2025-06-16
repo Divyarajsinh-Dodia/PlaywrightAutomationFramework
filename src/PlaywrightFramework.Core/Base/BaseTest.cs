@@ -43,7 +43,7 @@ public abstract class BaseTest
     /// <summary>
     /// Helper for capturing screenshots
     /// </summary>
-    protected ScreenshotHelper ScreenshotHelper { get; private set; } = null!;
+    //protected ScreenshotHelper ScreenshotHelper { get; private set; } = null!;
     
     /// <summary>
     /// Helper for handling test data
@@ -92,7 +92,7 @@ public abstract class BaseTest
         Extensions.LocatorContext.SetContext(Config, Logger);
 
         // Initialize helpers
-        ScreenshotHelper = new ScreenshotHelper(Page, Config, Logger);
+        //ScreenshotHelper = new ScreenshotHelper(Page, Config, Logger);
         //TestDataHelper = new TestDataHelper(Config, Logger);
           // Initialize page factory for fluent page navigation
         var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
@@ -124,7 +124,7 @@ public abstract class BaseTest
             if (testResult == NUnit.Framework.Interfaces.TestStatus.Failed &&
                 Config.Execution.CaptureScreenshotOnFailure)
             {
-                await CaptureFailureScreenshotAsync();
+                //await CaptureFailureScreenshotAsync();
             }
 
             // Attach page source on failure for debugging
@@ -203,29 +203,29 @@ public abstract class BaseTest
         await WaitAsync(TimeSpan.FromSeconds(seconds));
     }
 
-    /// <summary>
-    /// Takes a screenshot with the specified name
-    /// </summary>
-    /// <param name="screenshotName">Name for the screenshot</param>
-    protected async Task<string> TakeScreenshotAsync(string? screenshotName = null)
-    {
-        screenshotName ??= $"{TestContext.CurrentContext.Test.Name}_{DateTime.Now:yyyyMMdd_HHmmss}";
-        var screenshotPath = await ScreenshotHelper.TakeScreenshotAsync(screenshotName);
+    ///// <summary>
+    ///// Takes a screenshot with the specified name
+    ///// </summary>
+    ///// <param name="screenshotName">Name for the screenshot</param>
+    //protected async Task<string> TakeScreenshotAsync(string? screenshotName = null)
+    //{
+    //    screenshotName ??= $"{TestContext.CurrentContext.Test.Name}_{DateTime.Now:yyyyMMdd_HHmmss}";
+    //    var screenshotPath = await ScreenshotHelper.TakeScreenshotAsync(screenshotName);
 
-        // Attach screenshot bytes to Allure as base64 so it's always present in the report
-        try
-        {
-            var bytes = await File.ReadAllBytesAsync(screenshotPath);
-            var attachmentName = $"Screenshot_{screenshotName}";
-            AllureApi.AddAttachment(attachmentName, "image/png", bytes);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Failed to attach screenshot to Allure");
-        }
+    //    // Attach screenshot bytes to Allure as base64 so it's always present in the report
+    //    try
+    //    {
+    //        var bytes = await File.ReadAllBytesAsync(screenshotPath);
+    //        var attachmentName = $"Screenshot_{screenshotName}";
+    //        AllureApi.AddAttachment(attachmentName, "image/png", bytes);
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        Logger.LogWarning(ex, "Failed to attach screenshot to Allure");
+    //    }
 
-        return screenshotPath;
-    }
+    //    return screenshotPath;
+    //}
 
     /// <summary>
     /// Retries an action with the specified number of attempts
@@ -335,7 +335,7 @@ public abstract class BaseTest
 
         // Register other services
         services.AddSingleton<BrowserManager>();
-        services.AddTransient<ScreenshotHelper>();
+        //services.AddTransient<ScreenshotHelper>();
         services.AddTransient<TestDataHelper>();
 
         _serviceProvider = services.BuildServiceProvider();
@@ -418,21 +418,21 @@ public abstract class BaseTest
         _ => Microsoft.Extensions.Logging.LogLevel.Information
     };
 
-    /// <summary>
-    /// Captures a screenshot when a test fails
-    /// </summary>
-    private async Task CaptureFailureScreenshotAsync()
-    {
-        try
-        {
-            var screenshotPath = await TakeScreenshotAsync($"FAILURE_{TestContext.CurrentContext.Test.Name}");
-            Logger.LogInformation("Failure screenshot captured: {Path}", screenshotPath);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to capture failure screenshot");
-        }
-    }
+    ///// <summary>
+    ///// Captures a screenshot when a test fails
+    ///// </summary>
+    //private async Task CaptureFailureScreenshotAsync()
+    //{
+    //    try
+    //    {
+    //        var screenshotPath = await TakeScreenshotAsync($"FAILURE_{TestContext.CurrentContext.Test.Name}");
+    //        Logger.LogInformation("Failure screenshot captured: {Path}", screenshotPath);
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        Logger.LogError(ex, "Failed to capture failure screenshot");
+    //    }
+    //}
 
     /// <summary>
     /// Attaches page source for debugging failed tests

@@ -35,7 +35,7 @@ public class LoginPage : FluentBasePage
     /// </summary>
     public HomePage HomePage => _homePage ??= PageFactory.GetPage<HomePage>();
 
-    public LoginPage(IPage page, TestConfiguration config, ILogger<LoginPage> logger, PageFactory pageFactory) 
+    public LoginPage(IPage page, TestConfiguration config, ILogger logger, PageFactory pageFactory) 
         : base(page, config, logger, pageFactory)
     {
     }

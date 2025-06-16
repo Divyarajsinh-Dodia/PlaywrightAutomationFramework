@@ -12,10 +12,20 @@ namespace PlaywrightFramework.Tests.Tests;
 /// Simplified login test suite demonstrating framework capabilities without Allure dependencies
 /// </summary>
 [TestFixture]
-public class LoginTestsSimple : Base  // Inherits from Base, which handles login setup
+public class LoginTestsSimple : BaseTest  // Inherits directly from BaseTest
 {
-    // No need for separate login setup - Base class handles it in OneTimeSetUpAsync
-    // The _loginPage and _dashboardPage are available from Base class
+    private LoginPage _loginPage;
+
+    [SetUp]
+    public async Task SetupAsync()
+    {
+        await base.SetUpAsync();
+        _loginPage = PageFactory.GetPage<LoginPage>();
+        await _loginPage.NavigateToLoginPageAsync();
+        await _loginPage.EnterUsernameAsync("divyaraj.dodia.ext@envu.com");
+        await _loginPage.EnterPasswordAsync("May@1617");
+        await _loginPage.EnterSMSAsync();
+    }
 
     private const string WORKSHEET_NAME = "InventoryMovement";
 
@@ -56,7 +66,7 @@ public class LoginTestsSimple : Base  // Inherits from Base, which handles login
     {
         Console.WriteLine($"Running login test with parameters: Environment={environment}, Entity={entity}, Warehouse={warehouse}, OffsetAccount={offsetAccount}, ItemNumber={itemNumber}, ItemQty={itemQty}, BatchNumber={batchNumber}, Location={location}");
         Console.WriteLine("Starting login test with valid credentials.");
-        ScreenshotHelper.TakeScreenshotAsync("LoginTestStart").Wait();
+        //ScreenshotHelper.TakeScreenshotAsync("LoginTestStart").Wait();
         StringAssert.Contains("US01", entity, "Entity should be US01");
     }
-} 
+}

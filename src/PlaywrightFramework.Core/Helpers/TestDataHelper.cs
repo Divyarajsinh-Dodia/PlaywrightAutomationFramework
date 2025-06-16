@@ -20,7 +20,7 @@ public class TestDataHelper
 
     public static string GetExcelPath()
     {
-        string excelPath = @"C:\Users\divya\Downloads\EnvuPipelineData 1.xlsx";
+        string excelPath = @"C:\Users\Divyaraj.Dodia\Downloads\AutomationDemo_Data.xlsx";
         return excelPath;
     }
 
